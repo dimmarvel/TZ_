@@ -55,6 +55,9 @@ void Client::on_packet(const server::Packet &packet)
 
 void Client::params_set(const server::Packet &packet) const
 {
+    if (!ensure_authorized(packet.get_type()))
+        return;
+
     auto params = packet.get_params();
 
     if (!params)
@@ -66,6 +69,9 @@ void Client::params_set(const server::Packet &packet) const
 
 void Client::buy(const server::Packet &packet)
 {
+    if (!ensure_authorized(packet.get_type()))
+        return;
+
     auto item_id = packet.get_item_id();
 
     if (!player->balance->can_afford(item_id))
@@ -90,7 +96,7 @@ void Client::login(const server::Packet &packet)
         return;
     }
 
-    player = Player::authorize(credentials);
+    player = std::make_shared<Player>(credentials);
 
     if (!player)
     {
@@ -99,4 +105,15 @@ void Client::login(const server::Packet &packet)
     }
 
     logger->info("Client {} logged in successfully", player->id);
+}
+
+bool Client::ensure_authorized(server::PacketType bad_call)
+{
+    if (is_authorized())
+        return true;
+
+    logger->warning("Unauthorized client tried to call {:?}", static_cast<int>(bad_call));
+    // Any thing which send error
+    io->send_error(server::Error::UNAUTHORIZED);
+    return false;
 }

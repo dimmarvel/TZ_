@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <memory>
 
 class IO;
 class Requests;
@@ -25,12 +26,17 @@ public:
 private:
     IO *io;
     std::shared_ptr<Requests> requests;
-    Player *player;
+    std::shared_ptr<Player> player; // nullptr if didnt login in
 
     using PacketHandler = std::function<void(const server::Packet &)>;
     std::unordered_map<server::PacketType, PacketHandler> packet_handlers;
 
     void on_packet(const server::Packet &packet);
+
+    // Return true if login in
+    [[nodiscard]] bool is_authorized() const noexcept { return !!player; }
+    // If didnt authorized - send error and return false
+    bool ensure_authorized(server::PacketType bad_call);
 
     // Примеры обработчиков пакетов
     void params_set(const server::Packet &packet) const;
