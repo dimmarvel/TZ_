@@ -5,6 +5,7 @@
 #include "Lockable.h"
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 class IO;
 class Requests;
@@ -25,6 +26,9 @@ private:
     IO *io;
     std::shared_ptr<Requests> requests;
     Player *player;
+
+    using PacketHandler = std::function<void(const server::Packet &)>;
+    std::unordered_map<server::PacketType, PacketHandler> packet_handlers;
 
     void on_packet(const server::Packet &packet);
 

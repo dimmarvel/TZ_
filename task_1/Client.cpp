@@ -10,6 +10,11 @@ Client::Client(IO *io) :
     io(io), player(nullptr)
 {
     this->requests = std::make_shared<Requests>(this);
+    packet_handlers = {
+        { server::PacketType::PARAMS_SET, [this](const auto &p){ this->params_set(p); } },
+        { server::PacketType::BUY,        [this](const auto &p){ this->buy(p);        } },
+        { server::PacketType::LOGIN,      [this](const auto &p){ this->login(p);      } }
+    };
 }
 
 Client::~Client() = default;
@@ -40,23 +45,12 @@ void Client::on_event(const ClientEvent &event)
 
 void Client::on_packet(const server::Packet &packet)
 {
-    switch (packet.get_type())
-    {
-        case server::PacketType::PARAMS_SET:
-            this->params_set(packet);
-            break;
+    const auto it = packet_handlers.find(packet.get_type());
+    if (it != packet_handlers.end())
+        it->second(packet);
+    else
+        logger->warning("Unhandled packet type {}", static_cast<int>(packet.get_type()));
 
-        case server::PacketType::BUY:
-            this->buy(packet);
-            break;
-            
-        case server::PacketType::LOGIN:
-            this->login(packet);
-            break;
-
-        default:
-            logger->warning("Unhandled packet type {}", packet.get_type());
-    }
 }
 
 void Client::params_set(const server::Packet &packet) const
